@@ -1,11 +1,9 @@
-/Codigo sensor umidade
 #include <WiFi.h>
 #include <PubSubClient.h>
 
 const char* ssid = "Wokwi-GUEST";
 const char* password = "";
-
-const char* mqtt_server = "IP_AWS"; 
+const char* mqtt_server = "44.192.34.245"; 
 
 const int pinoSensor = 34; 
 
@@ -26,8 +24,7 @@ void setup_wifi() {
 
 void reconnect() {
   while (!client.connected()) {
-    // ID único para não dar conflito
-    if (client.connect("ESP32_Sensor_Anna_Final")) { 
+    if (client.connect("ESP32_Sensor_Anna")) { 
       Serial.println("Sensor Conectado!");
     } else delay(5000);
   }
@@ -40,14 +37,15 @@ void loop() {
   int valorBruto = analogRead(pinoSensor);
   int umidade = map(valorBruto, 0, 4095, 0, 100);
 
-  // Envia SÓ O NÚMERO (Sem %)
+  // CONVERTE SÓ PARA NÚMERO
   char msg[50];
   sprintf(msg, "%d", umidade);
   
+  // Envia número puro
   client.publish("irrigacao/sensor/umidade_solo", msg);
   
   Serial.print("Umidade Enviada: ");
-  Serial.println(msg);
+  Serial.println(msg); // Vai aparecer só o número (ex: 45)
   
   delay(5000); 
 }
