@@ -1,0 +1,176 @@
+[
+    {
+        "id": "5f325c0b85293072",
+        "type": "mqtt in",
+        "z": "b7847a5495207fcd",
+        "name": "",
+        "topic": "irrigacao/sensor/umidade_solo",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "1f731ac137ad2d32",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 410,
+        "y": 140,
+        "wires": [
+            [
+                "f87b2545472d5f11"
+            ]
+        ]
+    },
+    {
+        "id": "05a146d895c410f9",
+        "type": "mysql",
+        "z": "b7847a5495207fcd",
+        "mydb": "3c4f976b40729a31",
+        "name": "Iot_db",
+        "x": 1010,
+        "y": 440,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "fd18312b79feefa9",
+        "type": "function",
+        "z": "b7847a5495207fcd",
+        "name": "RegraDeNegocio",
+        "func": "// 1. Recupera os dados\nvar umidade = msg.umidade;      \nvar tempo = msg.payload;        // Resposta REAL da API OpenWeatherMap (JSON)\n\n// 2. Processa o clima e a umidade\n// Extrai o status principal do clima (Ex: Rain, Clear, Clouds). Se a API falhar, registra \"API Falhou\".\nvar climaPrincipal = (tempo && tempo.weather && tempo.weather[0]) ? tempo.weather[0].main : \"API Falhou\";\n\n// --- 3. LÓGICA DE DECISÃO (A Regra de Negócio Completa) ---\nvar comando = \"DESLIGAR\"; \n\n// Regra de Negócio que vale ponto: LIGA SOMENTE se estiver SECO (abaixo de 30%) \n// E NÃO estiver chovendo (evitando o desperdício de água).\nif (umidade < 30 && climaPrincipal !== \"Rain\" && climaPrincipal !== \"Thunderstorm\") { \n    comando = \"LIGAR\";\n}\n\n// --- 4. PREPARAÇÃO DAS SAÍDAS ---\n\n// Saída 1: Comando para o ESP32 Atuador\nvar msgBomba = { payload: comando };\n\n// Saída 2: Cria a Query SQL para inserir no MySQL\n// Logamos o Clima Real (ClimaPrincipal) + a Decisão para auditoria.\nvar logDecisao = climaPrincipal + \" - Decisao: \" + comando;\n\n// Monta a query SQL\n// O campo 'previsao_tempo' no banco de dados receberá o resultado da API.\nvar sql = \"INSERT INTO leituras (umidade, previsao_tempo) VALUES (\" + umidade + \", '\" + logDecisao + \"')\";\nvar msgBanco = { topic: sql };\n\nreturn [msgBomba, msgBanco];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 630,
+        "y": 360,
+        "wires": [
+            [
+                "991188b289125f90"
+            ],
+            [
+                "05a146d895c410f9"
+            ]
+        ]
+    },
+    {
+        "id": "f87b2545472d5f11",
+        "type": "change",
+        "z": "b7847a5495207fcd",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "umidade",
+                "pt": "msg",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 820,
+        "y": 140,
+        "wires": [
+            [
+                "6f76504769b1b464"
+            ]
+        ]
+    },
+    {
+        "id": "991188b289125f90",
+        "type": "mqtt out",
+        "z": "b7847a5495207fcd",
+        "name": "",
+        "topic": "irrigacao/comando",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "1f731ac137ad2d32",
+        "x": 1050,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "6f76504769b1b464",
+        "type": "http request",
+        "z": "b7847a5495207fcd",
+        "name": "",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://api.openweathermap.org/data/2.5/weather?lat=-23.5505&lon=-46.6333&appid=b15a7030aa1b30cdd58b60a1038ebe99&units=metric",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 600,
+        "y": 260,
+        "wires": [
+            [
+                "fd18312b79feefa9"
+            ]
+        ]
+    },
+    {
+        "id": "1f731ac137ad2d32",
+        "type": "mqtt-broker",
+        "name": "projeto",
+        "broker": "localhost",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "3c4f976b40729a31",
+        "type": "MySQLdatabase",
+        "name": "iot_db",
+        "host": "127.0.0.1",
+        "port": "3306",
+        "db": "fazenda",
+        "tz": "",
+        "charset": "UTF8"
+    },
+    {
+        "id": "6f755d0fb3bc9989",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-node-mysql": "2.0.0"
+        }
+    }
+]
